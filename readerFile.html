@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>FileSystem reader file</title>
+</head>
+<body>
+<script type="text/javascript">
+    "use strict";
+    window.requestFileSystem = window.requestFileSystem || window.webkitRequestFileSystem;
+    window.resolveLocalFileSystemURL = window.resolveLocalFileSystemURL || window.webkitResolveLocalFileSystemURL;
+    var fileSystemObj = {
+        fs          : null,
+        size        : 52428800,
+        errorHandler:function(e){
+            switch (e.name) {
+                case 'QuotaExceededError':
+                    break;
+                case 'NotFoundError':
+                    break;
+                case 'SecurityError':
+                    break;
+                case 'InvalidStateError':
+                    break;
+                case 'InvalidModificationError':
+                    break;
+                default:
+            }
+            console.warn(e.name);
+        },
+        readerFile:function(file,callBack){
+            fileSystemObj.fs.root.getFile(file, {create: true}, function(fileEntry) {
+                fileEntry.file(function(file) {
+                    var reader = new FileReader();
+                    reader.onloadend = function() {
+                        callBack && callBack.call(fileEntry,this.result);
+                    };
+                    reader.readAsText(file);
+                }, fileSystemObj.errorHandler);
+            }, fileSystemObj.errorHandler);
+        },
+        initialize  : function() {
+            window.requestFileSystem(TEMPORARY, this.size, function (fs) {
+                fileSystemObj.fs = fs;
+                fileSystemObj.readerFile("test.html",function(text){
+                    var txtArea = document.createElement('textarea');
+                    txtArea.value = text;
+                    txtArea.cols = 50;
+                    txtArea.rows = 10;
+                    document.body.appendChild(txtArea);
+                });
+            })
+        }
+    };
+    if(window.requestFileSystem) {
+        navigator.webkitTemporaryStorage.queryUsageAndQuota(function (usage, quota) {
+            if (!quota) {
+                navigator.webkitTemporaryStorage.requestQuota(fileSystemObj.size, function () {
+                    fileSystemObj.initialize();
+                }, fileSystemObj.errorHandler);
+            }else{
+                fileSystemObj.initialize();
+            }
+        });
+    }else{
+        alert("请使用chrome浏览器浏览!");
+    }
+</script>
+</body>
+</html>
