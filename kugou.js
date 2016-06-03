@@ -1,6 +1,5 @@
 window.requestFileSystem = window.requestFileSystem || window.webkitRequestFileSystem;
 window.resolveLocalFileSystemURL = window.resolveLocalFileSystemURL || window.webkitResolveLocalFileSystemURL;
-window.BlobBuilder = window.WebKitBlobBuilder || window.BlobBuilder;
 var STRING_HASH = new Date().toLocaleString().match(/(\d+)/g).slice(0,4).join(""),
         LOCATION_ORIGIN = "http://" + location.hostname,//ie低版本不支持location.origin
         HREF_FM_HOME = LOCATION_ORIGIN + "/fm2/app/publicV2/html/recommend/index.html";//电台默认首页
