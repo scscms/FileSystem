@@ -2,18 +2,22 @@
 ### 简介
 FileSystem提供了文件夹和文件的创建、移动、删除等操作，大大方便了数据的本地处理，而且所有的数据都是在沙盒(sandboxed)中，不同的web程序不能互相访问，这就保证了数据的完整和安全。<br/>
 目前只有Chrome浏览器对FileSystem API支持，所以只能运行在Chrome浏览器中。<br/>
-应用场景：<br/>
-1.持久型上传器
+应用场景：
+
+- [x] 1.持久型上传器
+
 >选中要上传的文件或目录后，系统会将文件复制到本地沙盒并批次上传。即使发生浏览器崩溃、网络中断等状况，也可在之后重新开始上传。
 
-2.视频游戏、音乐或其他具有大量媒体资产的应用
+- [x] 2.视频游戏、音乐或其他具有大量媒体资产的应用
+
 >预先下载文件，需要用时无需等待。
 
-3.可使用离线访问权限或本地存储的高速音频/照片编辑器
+- [x] 3.可使用离线访问权限或本地存储的高速音频/照片编辑器
+
 >通过创建目录来整理项目文件这一功能非常有用。
 >修改后的文件应可供客户端应用 \[iTunes、Picasa] 访问。
 
-4.离线web存储
+- [x] 4.离线web存储<br/>
 >下载网络文件本地存储，区别其他本地文件存储的是，本存储可管理。本地文件可通过二进制地址或者filesystem:协议访问，形成本地web网站。这正是我使用的功能。
 
 ### 申请空间
@@ -86,17 +90,50 @@ window.requestFileSystem(TEMPORARY, this.size, function (fs) {
                 console.log('写入失败: ' + e.toString());
             };
             //可以创建ArrayBuffer、Blob等对象写入文件，但不建议使用BlobBuilder弃用方法
-            fileWriter.write(new Blob(["something 你好"], {type: "text/plain"}));
+            fileWriter.write(new Blob(["something"], {type: "text/plain"}));
         }, fileSystemObj.errorHandler);
     }, fileSystemObj.errorHandler);
 })
 ```
 其中fs.root.getFile意思是在根目录下获取文件。create: true表示假如文件不存在就自动创建。而exclusive: true表示保证文件的唯一性，即假如文件存在时不继续执行后面的代码，立刻返回文件。
-### 创建文件夹
-### 查看文件
+案例查看`createFile.html`
 ### 读取文件
+getFile获取文件后可以使用FileReader对象读取文件内容。
+```JavaScript
+    fs.root.getFile('log.txt', {}, function(fileEntry) {
+        fileEntry.file(function(file) {
+           var reader = new FileReader();    
+           reader.onloadend = function(e) {
+             var txtArea = document.createElement('textarea');
+             txtArea.value = this.result;
+             document.body.appendChild(txtArea);
+           }; 
+           reader.readAsText(file);
+        }, fileSystemObj.errorHandler);    
+    }, fileSystemObj.errorHandler);
+```
+案例查看`readerFile.html`
+### 创建文件夹
+```JavaScript
+    fs.root.getDirectory("abc", {create: true}, function(dirEntry) {
+        //ok
+    }, fileSystemObj.errorHandler);
+```
+
+### 查看文件
+
 ### 修改文件
 ### 复制文件或文件夹
 ### 删除文件
 ### 删除文件夹
 ### ajax下载文件
+
+fileEntry.getMetadata(successCallback, opt_errorCallback);
+fileEntry.remove(successCallback, opt_errorCallback);
+fileEntry.moveTo(dirEntry, opt_newName, opt_successCallback, opt_errorCallback);
+fileEntry.copyTo(dirEntry, opt_newName, opt_successCallback, opt_errorCallback);
+fileEntry.getParent(successCallback, opt_errorCallback);
+fileEntry.toURL(opt_mimeType);
+
+fileEntry.file(successCallback, opt_errorCallback);
+fileEntry.createWriter(successCallback, opt_errorCallback);
