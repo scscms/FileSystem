@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>FileSystem create file</title>
+</head>
+<body>
+<script type="text/javascript">
+    "use strict";
+    window.requestFileSystem = window.requestFileSystem || window.webkitRequestFileSystem;
+    window.resolveLocalFileSystemURL = window.resolveLocalFileSystemURL || window.webkitResolveLocalFileSystemURL;
+    var fileSystemObj = {
+        fs          : null,
+        size        : 52428800,
+        errorHandler:function(e){
+            switch (e.name) {
+                case 'QuotaExceededError':
+                    break;
+                case 'NotFoundError':
+                    break;
+                case 'SecurityError':
+                    break;
+                case 'InvalidStateError':
+                    break;
+                case 'InvalidModificationError':
+                    break;
+                default:
+            }
+            console.warn(e.name);
+        },
+        createFile:function(file,text,mineType){
+            fileSystemObj.fs.root.getFile(file, {create: true, exclusive: false}, function(fileEntry) {
+                console.log(fileEntry);
+                //留意它的几个属性{fullPath:"/log.txt",isDirectory: false, isFile : true, name :"log.txt"}
+
+                // 生成FileWriter对象
+                fileEntry.createWriter(function(fileWriter) {
+                    //fileWriter.seek(0);默认。意思是从第几行开始写起
+                    fileWriter.onwriteend = function() {
+                        if (fileWriter.length == 0) {
+                            //可以创建ArrayBuffer、Blob等对象写入文件，但不建议使用BlobBuilder废弃方法
+                            fileWriter.write(new Blob([text], {type: mineType||"text/plain"}));
+                        }else{
+                            console.log('写入完成');
+                            document.writeln(`<a href="filesystem:${location.origin}/temporary${fileEntry.fullPath}" target="_blank">浏览${file}</a>`);
+                        }
+                    };
+                    fileWriter.onerror = function(e) {
+                        console.log('写入失败: ' + e.toString());
+                    };
+                    fileWriter.truncate(0);//保留原文档多少行，保留0行就是全部删除原文件内容。truncate也等于一次写入动作，所以需要在onwriteend执行第二次write。
+                }, fileSystemObj.errorHandler);
+            }, fileSystemObj.errorHandler);
+        },
+        initialize  : function() {
+            window.requestFileSystem(TEMPORARY, this.size, function (fs) {
+                fileSystemObj.fs = fs;
+                let html = `<!doctype html>
+                                <html lang="en">
+                                    <head>
+                                      <meta charset="UTF-8">
+                                      <title>FileSystem文件系统</title>
+                                    </head>
+                                    <body>
+                                      <h1>FileSystem文件系统</h1>
+                                      <p>You are the best</p>
+                                    </body>
+                                </html>`;
+                fileSystemObj.createFile("test.html",html);
+            })
+        }
+    };
+    if(window.requestFileSystem) {
+        navigator.webkitTemporaryStorage.queryUsageAndQuota(function (usage, quota) {
+            if (!quota) {
+                navigator.webkitTemporaryStorage.requestQuota(fileSystemObj.size, function (grantedBytes) {
+                    fileSystemObj.initialize();
+                }, fileSystemObj.errorHandler);
+            }else{
+                fileSystemObj.initialize();
+            }
+        });
+    }else{
+        alert("请使用chrome浏览器浏览!");
+    }
+
+    //自动下载文件
+    var data = { x: 42, s: "hello, world 我们", d: new Date() },fileName = "download.json";
+    function saveData(data,fileName){
+        var a = document.createElement("a"),
+            json = JSON.stringify(data),
+            blob = new Blob([json], {type: "octet/stream"}),
+            url = window.URL.createObjectURL(blob);
+        a.href = url;
+        a.download = fileName;
+        a.style.display = "none";
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.parentNode.removeChild(a);
+    }
+    //saveData(data, fileName);
+</script>
+</body>
+</html>
