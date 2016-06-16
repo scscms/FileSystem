@@ -28,6 +28,14 @@
             }
             console.warn(e.name);
         },
+        /**
+         * 创建文件
+         * @method
+         * @param {string} file 合法文件名称
+         * @param {string} text 文件内容
+         * @param {string} [mineType] Multipurpose Internet Mail Extensions默认text/plain
+         * @return
+         */
         createFile:function(file,text,mineType){
             fileSystemObj.fs.root.getFile(file, {create: true, exclusive: false}, function(fileEntry) {
                 console.log(fileEntry);
@@ -42,7 +50,7 @@
                             fileWriter.write(new Blob([text], {type: mineType||"text/plain"}));
                         }else{
                             console.log('写入完成');
-                            document.writeln(`<a href="filesystem:${location.origin}/temporary${fileEntry.fullPath}" target="_blank">浏览${file}</a>`);
+                            document.writeln(`<a href="filesystem:${location.origin}/temporary${fileEntry.fullPath}" target="_blank">浏览${file}</a>(留意console控制台)`);
                         }
                     };
                     fileWriter.onerror = function(e) {

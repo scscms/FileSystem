@@ -1,3 +1,6 @@
+function isTypeObject(obj,type){
+    return Object.prototype.toString.call(obj) === '[object '+type+']';
+}
 window.requestFileSystem = window.requestFileSystem || window.webkitRequestFileSystem;
 window.resolveLocalFileSystemURL = window.resolveLocalFileSystemURL || window.webkitResolveLocalFileSystemURL;
 var STRING_HASH = new Date().toLocaleString().match(/(\d+)/g).slice(0,4).join(""),

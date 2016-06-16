@@ -28,12 +28,19 @@
             }
             console.warn(e.name);
         },
+        /**
+         * 读取根目录下的文件
+         * @method
+         * @param {string} file 合法文件名称
+         * @param {function} [callBack] 回调函数
+         * @return
+         */
         readerFile:function(file,callBack){
             fileSystemObj.fs.root.getFile(file, {create: true}, function(fileEntry) {
                 fileEntry.file(function(file) {
                     var reader = new FileReader();
                     reader.onloadend = function() {
-                        callBack && callBack.call(fileEntry,this.result);
+                        typeof callBack == 'function' && callBack.call(fileEntry,this.result);
                     };
                     reader.readAsText(file);
                 }, fileSystemObj.errorHandler);
