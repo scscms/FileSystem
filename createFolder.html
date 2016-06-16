@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>FileSystem create file</title>
+</head>
+<body>
+<script type="text/javascript">
+    "use strict";
+    window.requestFileSystem = window.requestFileSystem || window.webkitRequestFileSystem;
+    window.resolveLocalFileSystemURL = window.resolveLocalFileSystemURL || window.webkitResolveLocalFileSystemURL;
+    var fileSystemObj = {
+        fs          : null,
+        size        : 52428800,
+        errorHandler:function(e){
+            switch (e.name) {
+                case 'QuotaExceededError':
+                    break;
+                case 'NotFoundError':
+                    break;
+                case 'SecurityError':
+                    break;
+                case 'InvalidStateError':
+                    break;
+                case 'InvalidModificationError':
+                    break;
+                default:
+            }
+            console.warn(e.name);
+        },
+        /**
+         * 创建单个根目录文件夹
+         * @method
+         * @param {string} folder 合法文件夹名称
+         * @return
+         */
+        createFolder　:　function(folder){
+            fileSystemObj.fs.root.getDirectory(folder, {create: true}, function(dirEntry) {
+                document.writeln(`${dirEntry.name}文件夹创建成功，完整路径为${dirEntry.fullPath}`);
+            }, fileSystemObj.errorHandler);
+        },
+        /**
+         * 创建目录地址文件夹
+         * @method
+         * @param {string} directory 文件夹目录地址，必须从根目录开始
+         * @param {function} [callBack] 回调函数
+         * @return
+         */
+        createDir :function(directory, callBack) {
+            var folders = directory.replace(/\\+/g,'/').split(/\/+/g).filter(function(v){
+                return v && /\w/.test(v);//过滤一些非法目录名称。并没处理./../之类的
+            });
+            function createPath(rootDir){
+                if (folders.length){
+                    rootDir.getDirectory(folders.shift(), {create: true}, function(dirEntry) {
+                        createPath(dirEntry);
+                    }, fileSystemObj.errorHandler);
+                }else{
+                    typeof callBack == 'function' && callBack.call(rootDir);
+                }
+            }
+            createPath(fileSystemObj.fs.root);
+        },
+        initialize  : function() {
+            window.requestFileSystem(TEMPORARY, this.size, function (fs) {
+                fileSystemObj.fs = fs;
+                fileSystemObj.createFolder("scscms");//创建单个文件夹
+                fileSystemObj.createDir("test/www\\\scscms//",function(){
+                    document.writeln(`<br/>创建目录地址文件夹${this.fullPath}`);
+                    console.log(this);
+                });//创建路径test/www/scscms
+            })
+        }
+    };
+    if(window.requestFileSystem) {
+        navigator.webkitTemporaryStorage.queryUsageAndQuota(function (usage, quota) {
+            if (!quota) {
+                navigator.webkitTemporaryStorage.requestQuota(fileSystemObj.size, function (grantedBytes) {
+                    fileSystemObj.initialize();
+                }, fileSystemObj.errorHandler);
+            }else{
+                fileSystemObj.initialize();
+            }
+        });
+    }else{
+        alert("请使用chrome浏览器浏览!");
+    }
+</script>
+</body>
+</html>

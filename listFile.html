@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>FileSystem list file</title>
+</head>
+<body>
+<script type="text/javascript">
+    "use strict";
+    window.requestFileSystem = window.requestFileSystem || window.webkitRequestFileSystem;
+    window.resolveLocalFileSystemURL = window.resolveLocalFileSystemURL || window.webkitResolveLocalFileSystemURL;
+    var fileSystemObj = {
+        fs          : null,
+        size        : 52428800,
+        errorHandler:function(e){
+            switch (e.name) {
+                case 'QuotaExceededError':
+                    break;
+                case 'NotFoundError':
+                    break;
+                case 'SecurityError':
+                    break;
+                case 'InvalidStateError':
+                    break;
+                case 'InvalidModificationError':
+                    break;
+                default:
+            }
+            console.warn(e.name);
+        },
+        /**
+         * 罗列绝对地址下的文件和文件夹
+         * @method
+         * @param {string} absolutePath 绝对地址文件夹
+         * @param {function} [callBack] 回调函数
+         * @return
+         */
+        listAbsolutePath:function(absolutePath,callBack){
+            resolveLocalFileSystemURL(absolutePath,function(dirEntry){
+                var dirReader = dirEntry.createReader();
+                dirReader.readEntries(function(results){
+                    callBack.call(dirReader,results);
+                },fileSystemObj.errorHandler);
+            },function(e){
+                callBack.call(e,[]);
+            })
+        },
+        /**
+         * 罗列相对地址下的文件和文件夹
+         * @method
+         * @param {string} relativePath 绝对地址文件夹
+         * @param {function} [callBack] 回调函数
+         * @return
+         */
+        listRelativePath:function(relativePath,callBack){
+            fileSystemObj.fs.root.getDirectory(relativePath,{},function(dirEntry){
+                var dirReader = dirEntry.createReader();
+                dirReader.readEntries(function(results){
+                    callBack.call(dirReader,results);
+                },fileSystemObj.errorHandler);
+            },function(e){
+                callBack.call(e,[]);
+            })
+        },
+        initialize  : function() {
+            window.requestFileSystem(TEMPORARY, this.size, function (fs) {
+                fileSystemObj.fs = fs;
+                var url = "filesystem:" + location.origin + "/temporary";
+                fileSystemObj.listAbsolutePath(url,function(arr){
+                    if(this.message){
+                        document.write(this.message);
+                        console.error(this.name);
+                    }else{
+                        document.write('<ol>');
+                        for(var i = arr.length;i--;){
+                            let file = arr[i];
+                            if(file.isFile){
+                                document.write(`<li>File:<a href="${url}/${file.name}" target="_blank">${file.name}</a> fullPath:${file.fullPath}</li>`);
+                            }else{
+                                document.write(`<li>Folder:${arr[i].name} fullPath:${arr[i].fullPath}</li>`);
+                            }
+                        }
+                        document.write('</ol>');
+                    }
+                });
+                fileSystemObj.listRelativePath("/",function(arr){
+                    if(this.message){
+                        document.write(this.message);
+                        console.error(this.name);
+                    }else{
+                        document.write('<ul>');
+                        for(var i = arr.length;i--;){
+                            document.write(`<li>${arr[i].isDirectory ? 'Folder:':'File:'}${arr[i].name} fullPath:${arr[i].fullPath}</li>`);
+                        }
+                        document.write('</ul>');
+                    }
+                });
+            })
+        }
+    };
+    if(window.requestFileSystem) {
+        navigator.webkitTemporaryStorage.queryUsageAndQuota(function (usage, quota) {
+            if (!quota) {
+                navigator.webkitTemporaryStorage.requestQuota(fileSystemObj.size, function (grantedBytes) {
+                    fileSystemObj.initialize();
+                }, fileSystemObj.errorHandler);
+            }else{
+                fileSystemObj.initialize();
+            }
+        });
+    }else{
+        alert("请使用chrome浏览器浏览!");
+    }
+</script>
+</body>
+</html>
