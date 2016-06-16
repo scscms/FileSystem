@@ -125,8 +125,8 @@ getDirectory是获取文件夹函数，重点在于添加了{create: true}属性
 ### 6、罗列文件和文件夹
 经过以上几个操作，在浏览器的filesystem系统里已经存在一些文件夹和文件，下面我们来罗列根目录下的文件和文件夹。
 ```JavaScript
-    //读取绝对地址方法
-    window.resolveLocalFileSystemURL = window.resolveLocalFileSystemURL || window.webkitResolveLocalFileSystemURL;
+//读取绝对地址方法
+window.resolveLocalFileSystemURL = window.resolveLocalFileSystemURL || window.webkitResolveLocalFileSystemURL;
 ```
 所谓绝对地址指的是filesystem:http:\/\/www.scscms.com/temporary形式的绝对地址。
 当然我们也可以使用getDirectory方法获取相对本目录下的所有文件和文件夹。
