@@ -75,7 +75,7 @@
                         for(var i = arr.length;i--;){
                             let file = arr[i];
                             if(file.isFile){
-                                document.write(`<li>File:<a href="${url}/${file.name}" target="_blank">${file.name}</a> fullPath:${file.fullPath}</li>`);
+                                document.write(`<li>File:<a href="${file.toURL()}" target="_blank">${file.name}</a> fullPath:${file.fullPath}</li>`);
                             }else{
                                 document.write(`<li>Folder:${arr[i].name} fullPath:${arr[i].fullPath}</li>`);
                             }
@@ -98,6 +98,7 @@
             })
         }
     };
+
     if(window.requestFileSystem) {
         navigator.webkitTemporaryStorage.queryUsageAndQuota(function (usage, quota) {
             if (!quota) {

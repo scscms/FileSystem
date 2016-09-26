@@ -131,11 +131,48 @@ window.resolveLocalFileSystemURL=window.resolveLocalFileSystemURL||window.webkit
 所谓绝对地址指的是filesystem:http:\/\/www.scscms.com/temporary形式的绝对地址。
 当然我们也可以使用getDirectory方法获取相对本目录下的所有文件和文件夹。
 案例查看[listFile.html](https://rawgit.com/scscms/FileSystem/master/listFile.html)
-### 2、修改文件
+### 7、修改文件
 修改文件与创建文件一样。只文档类型需要注意，同时默认保存为utf-8编码。写入模式重点需要注意。
-### 2、复制文件或文件夹
-### 2、删除文件
-### 2、删除文件夹
+### 8、复制文件或文件夹
+复制文件有两种形式，一是用户选择硬盘的文件，另一种是filesystem复制filesystem里的文件。
+第一种形式几乎可以理解是克隆，靠getFile,createWriter形式重建文件。而后者可使用moveTo、copyTo形式直接移动或者复制
+FileEntry 和 DirectoryEntry 均可使用 copyTo() 复制现有条目。该方法会自动以递归方式复制文件夹。
+```JavaScript
+    function copy(cwd, src, dest) {
+        cwd.getFile(src, {}, function(fileEntry) {
+
+            cwd.getDirectory(dest, {}, function(dirEntry) {
+                fileEntry.copyTo(dirEntry);
+            }, errorHandler);
+
+        }, errorHandler);
+    }
+```
+### 9、删除文件
+```JavaScript
+fileSystemObj.fs.root.getFile(file,{create: false}, function(fileEntry) {
+    fileEntry.remove(function(){
+        //has been deleted
+    }, fileSystemObj.errorHandler);
+}, fileSystemObj.errorHandler);
+```
+### 10、删除文件夹
+```JavaScript
+fileSystemObj.fs.root.getDirectory("An absolute folder path",{}, function (dirEntry) {
+    dirEntry.removeRecursively(function() {
+        //has been deleted
+    }, fileSystemObj.errorHandler);
+});
+```
+以递归方式删除目录。如果您不需要某个包含条目的目录，不妨使用 removeRecursively()。该方法将以递归方式删除目录及其内容。
+以下代码会以递归方式删除“music”目录及其包含的所有文件和目录：
+```JavaScript
+fileSystemObj.fs.root.getDirectory('/misc/xxx/music', {}, function(dirEntry) {
+        dirEntry.removeRecursively(function() {
+            console.log('Directory removed.');
+        }, fileSystemObj.errorHandler);
+    }, fileSystemObj.errorHandler);
+```
 ### 2、ajax下载文件
 
 fileEntry.getMetadata(successCallback, opt_errorCallback);

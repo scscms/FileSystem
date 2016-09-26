@@ -44,13 +44,14 @@
                 // 生成FileWriter对象
                 fileEntry.createWriter(function(fileWriter) {
                     //fileWriter.seek(0);默认。意思是从第几行开始写起
+                    //fileWriter.seek(fileWriter.length); // Start write position at EOF.
                     fileWriter.onwriteend = function() {
                         if (fileWriter.length == 0) {
                             //可以创建ArrayBuffer、Blob等对象写入文件，但不建议使用BlobBuilder废弃方法
                             fileWriter.write(new Blob([text], {type: mineType||"text/plain"}));
                         }else{
                             console.log('写入完成');
-                            document.writeln(`<a href="filesystem:${location.origin}/temporary${fileEntry.fullPath}" target="_blank">浏览${file}</a>(留意console控制台)`);
+                            document.writeln(`<a href="${fileEntry.toURL()}" target="_blank">浏览${file}</a>(留意console控制台)`);
                         }
                     };
                     fileWriter.onerror = function(e) {
@@ -59,6 +60,39 @@
                     fileWriter.truncate(0);//保留原文档多少行，保留0行就是全部删除原文件内容。truncate也等于一次写入动作，所以需要在onwriteend执行第二次write。
                 }, fileSystemObj.errorHandler);
             }, fileSystemObj.errorHandler);
+        },
+        /**
+         * 创建文件方式2（发现文件重名就删除文件后重试）
+         * @method
+         * @param {string} file 合法文件名称
+         * @param {string} text 文件内容
+         * @param {string} [mineType] Multipurpose Internet Mail Extensions默认text/plain
+         * @return
+         */
+        createFile2:function(file,text,mineType){
+            //此方法是假如已经存在相同文件，先删除再写入
+            fileSystemObj.fs.root.getFile(file, {create: true, exclusive: true}, function(fileEntry) {
+                fileEntry.createWriter(function(fileWriter) {
+                    fileWriter.onwriteend = function() {
+                        console.log('写入完成');
+                        document.writeln(`<a href="${fileEntry.toURL()}" target="_blank">浏览${file}</a>`);
+                    };
+                    fileWriter.onerror = function(e) {
+                        console.log('写入失败: ' + e.toString());
+                    };
+                    fileWriter.write(new Blob([text], {type: mineType||"text/plain"}));
+                },fileSystemObj.errorHandler);
+            }, function(error){
+                if(error.name === "InvalidModificationError"){
+                    fileSystemObj.fs.root.getFile(file,{create: false}, function(fileEntry) {
+                        fileEntry.remove(function(){
+                            fileSystemObj.createFile2(file,text,mineType);
+                        }, fileSystemObj.errorHandler);
+                    }, fileSystemObj.errorHandler);
+                }else{
+                    fileSystemObj.errorHandler(error);
+                }
+            });
         },
         initialize  : function() {
             window.requestFileSystem(TEMPORARY, this.size, function (fs) {
