@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<!--kugoubegin-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>down FileSystem</title>
+    <style type="text/css">
+        html{ background:#fff; -webkit-text-size-adjust:none;  height:100%;-webkit-box-sizing:border-box;-moz-box-sizing:border-box;box-sizing:border-box;  scrollbar-face-color:#f3f3f3; scrollbar-arrow-color:#637f83; scrollbar-highlight-color:#dae0e0; scrollbar-shadow-color:#dae0e0; scrollbar-darkshadow-color:#fff; scrollbar-track-color:#fff; scrollbar-3dlight-color:#fff; scrollbar-base-color:#f8f8f8; padding-top:31px;position:relative;overflow:hidden;overflow-x:hidden;;-moz-user-select:none;-webkit-user-select:none;user-select:none;}
+        body{font:12px/1.5 "Microsoft YaHei", Arial, simsun,sans-serif;  height:100%}
+        img{border:1px solid red;width:50px;height:50px}
+    </style>
+</head>
+<body>
+<div id="id"></div>
+<script type="text/javascript">
+    /*
+    电台首屏完成载入时间
+        经过电台载入时间统计分析，优化电台本地包功能，电台首屏完成载入时间有了明显的提高。
+     电台功能模块化
+        经过对公共电台确定下线的几个需求做了清理，重构部分功能模块，精简了大量代码。
+     文档方法论总结
+        经过对公共电台各模块加载时间的统计分析，并尝试新方式构建本地包功能。撰写了《公共电台功能讲解》《公共电台大banner广告解读》《Nodejs学习手礼》
+    */
+    //http://www.html5rocks.com/en/tutorials/file/filesystem/
+    //http://www.jb51.net/html5/79765.html
+    //http://blog.csdn.net/salonzhou/article/details/28275713
+    //http://www.html5rocks.com/zh/tutorials/file/xhr2/
+    /*
+    基于filesystem的可操控的网络本地自定义缓存
+
+    目前本地网络缓存是浏览器完全操控的，web程序对其是不可访问、不可操作；
+    而filesystem是浏览器开放给web程序申请的一个临时或者永久的空间，在这里web程序可以进行数据的存储甚至文件的操作；
+    因此web程序就可借助FileSystem自定义下载一些文件进行缓存或预载，还可进行文件的新建、修改、更新和删除等操作；
+    借助web后端，还可跨域缓存其他网站的文件来统一管理；
+
+    因此形式可操控的网络本地自定义缓存，这对提升网页打开速度和用户体验有极大的帮助。
+    目前只有chrome浏览器支持。
+
+    关键词：requestFileSystem 本地存储 chrome
+    * */
+
+    /*
+     dataURL转换为Blob对象
+     function dataURLtoBlob(dataurl) {
+     var arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
+     bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
+     while(n--){
+     u8arr[n] = bstr.charCodeAt(n);
+     }
+     return new Blob([u8arr], {type:mime});
+     }
+     //test:
+     var blob = dataURLtoBlob('data:text/plain;base64,YWFhYWFhYQ==');
+
+     Canvas转换为Blob对象并使用Ajax发送
+     var dataurl = canvas.toDataURL('image/png');
+     var blob = dataURLtoBlob(dataurl);
+     //使用ajax发送
+     var fd = new FormData();
+     fd.append("image", blob, "image.png");
+     var xhr = new XMLHttpRequest();
+     xhr.open('POST', '/server', true);
+     xhr.send(fd);
+
+     function createDir(rootDir, folders) {
+     rootDir.getDirectory(folders[0], {create: true}, function(dirEntry) {
+     if (folders.length) {
+     createDir(dirEntry, folders.slice(1));
+     }
+     }, errorHandler);
+     };
+
+     createDir(fs.root, 'Documents/Images/Nature/Sky/'.split('/'));
+     */
+    window.requestFileSystem = window.requestFileSystem || window.webkitRequestFileSystem;
+    window.resolveLocalFileSystemURL = window.resolveLocalFileSystemURL || window.webkitResolveLocalFileSystemURL;
+    /*
+    * banner/大banner 所有素材
+    * */
+    var fileSystemObj = {
+        fs          :   null,//文件系统对象
+        imgFolder   :   "/",//图片所在文件夹
+        size        :   524288000,//申请500M临时空间 500*1024*1024
+        rootFolder  :   "filesystem:" + location.origin + "/temporary",
+        initialize  :   function(){
+            window.requestFileSystem(TEMPORARY, this.size, function (fs) {
+                fileSystemObj.fs = fs;
+                fileSystemObj.downLoader("http://www.scscms.com/scs_img/logo.png");// filesystem:http://localhost:63342/temporary/fm/upfile.html
+                //fileSystemObj.createDir(fileSystemObj.fs.root, 'fm'.split('/'));
+                window.resolveLocalFileSystemURL(fileSystemObj.rootFolder + fileSystemObj.imgFolder,function(fileEntry){
+                    console.log(fileEntry);
+                    var dirReader = fileEntry.createReader();
+                    dirReader.readEntries(function(results){
+                        if(!results.length){
+                            alert("没有文件！");
+                        }else{
+                            alert("读取到" + results.length + "个文件");
+                            for(var i = 0; i < results.length; i++){
+                                document.getElementById("id").innerHTML += '<img src="'+fileSystemObj.rootFolder + results[i].fullPath+'" style="border:1px solid red" />';
+                            }
+                        }
+                    },fileSystemObj.errorHandler);
+                },fileSystemObj.errorHandler);
+            }, fileSystemObj.errorHandler);
+        },
+        createDir   :function(rootDir, folders) {
+            //生成文件夹
+            rootDir.getDirectory(folders[0], {create: true}, function(dirEntry) {
+                if (folders.length) {
+                    fileSystemObj.createDir(dirEntry, folders.slice(1));
+                }
+            }, fileSystemObj.errorHandler);
+        },
+        readFile    :function(file,callBack){
+            //读取文件
+            var reader = new FileReader();
+            reader.onloadend = function(e) {
+                callBack(e);
+            };
+            reader.onerror = function(e){
+                callBack(e);
+            };
+            reader.readAsDataURL(file);
+        },
+        errorHandler:function(e){
+            switch (e.name) {
+                case 'QUOTA_EXCEEDED_ERR'://超出空间
+                    fileSystemObj.fs.root.getDirectory(fileSystemObj.imgFolder,{}, function (dirEntry) {
+                        dirEntry.remove(function() {
+                            console.log('Directory:' + fileSystemObj.imgFolder + ' removed.');
+                        }, fileSystemObj.errorHandler);
+                    });
+                    break;
+                case 'NOT_FOUND_ERR':
+                    break;
+                case 'SECURITY_ERR':
+                    break;
+                case 'INVALID_MODIFICATION_ERR':
+                    break;
+                case 'INVALID_STATE_ERR':
+                    break;
+                default:
+            }
+            console.error(e.name +":"+ e.message);//处理失败信息
+        },
+        downLoader:function(url){
+            function regStr(str,reg){
+                var _t = str.toString().split(/\?|#/)[0].match(reg);
+                return _t ? _t[1].toLowerCase() : "";
+            }
+            var fileName = regStr(url,/([^\/]+)([?#].*)?$/),suffix = regStr(fileName,/([^.]+)$/),mineType,backups = url;
+            if(this.fs && /^(txt|htm|html|css|swf|js|jpg|jpeg|png|gif)$/.test(suffix)) {
+                switch (suffix) {
+                    case "txt":
+                        mineType = "text/plain;charset=UTF-8";
+                        break;
+                    case "htm":
+                    case "html":
+                        mineType = "text/html;charset=UTF-8";
+                        break;
+                    case "css":
+                        mineType = "text/css;charset=UTF-8";
+                        break;
+                    case "swf":
+                        mineType = "application/x-shockwave-flash";
+                        break;
+                    case "js":
+                        mineType = "application/javascript;charset=UTF-8";
+                        break;
+                    case "jpg":
+                        mineType = "image/jpeg";
+                        break;
+                    case "jpeg":
+                    case "png":
+                    case "gif":
+                        mineType = "image/" + suffix;
+                        break;
+                }
+                var xhr = new XMLHttpRequest();
+                xhr.open('GET', url, true);
+                //xhr.responseType = "blob";
+                xhr.onreadystatechange = function () {
+                    if (this.readyState == 4 && this.status == 200) {
+                        var content = this.response;
+                        //fileSystemObj.fs.root.getDirectory(fileSystemObj.imgFolder, {create: true}, function(dirEntry) {
+                            fileSystemObj.fs.root.getFile(fileSystemObj.imgFolder + fileName, {create: true}, function (fileEntry) {
+                                fileEntry.createWriter(function (fileWriter) {
+                                    fileWriter.onwriteend = function () {
+                                        console.info('下载成功：' + fileName);
+                                    };
+                                    fileWriter.onerror = function (e) {
+                                        console.error('保存失败：' + fileName, e.message);
+                                    };
+                                    fileWriter.write(new Blob([new Uint8Array(content)], {type: mineType}));
+                                });
+                            });
+                        //}, fileSystemObj.errorHandler);
+                    }
+                };
+                xhr.onerror = function(e){
+                    //请求php下载图片
+                };
+                xhr.responseType = 'arraybuffer';
+                xhr.send();
+            }
+        }
+    };
+    if(window.requestFileSystem) {
+        navigator.webkitTemporaryStorage.queryUsageAndQuota(function (usage, quota) {
+            if (!quota) {
+                navigator.webkitTemporaryStorage.requestQuota(fileSystemObj.size, function (grantedBytes) {
+                    fileSystemObj.initialize(grantedBytes);
+                }, fileSystemObj.errorHandler);
+            }else{
+                fileSystemObj.initialize();
+            }
+        });
+    }
+
+    /*
+     扩展名 	类型/子类型
+     *      application/octet-stream
+     323 	text/h323
+     acx 	application/internet-property-stream
+     ai 	application/postscript
+     aif 	audio/x-aiff
+     aifc 	audio/x-aiff
+     aiff 	audio/x-aiff
+     asf 	video/x-ms-asf
+     asr 	video/x-ms-asf
+     asx 	video/x-ms-asf
+     au 	audio/basic
+     avi 	video/x-msvideo
+     axs 	application/olescript
+     bas 	text/plain
+     bcpio 	application/x-bcpio
+     bin 	application/octet-stream
+     bmp 	image/bmp
+     c 	text/plain
+     cat 	application/vnd.ms-pkiseccat
+     cdf 	application/x-cdf
+     cer 	application/x-x509-ca-cert
+     class 	application/octet-stream
+     clp 	application/x-msclip
+     cmx 	image/x-cmx
+     cod 	image/cis-cod
+     cpio 	application/x-cpio
+     crd 	application/x-mscardfile
+     crl 	application/pkix-crl
+     crt 	application/x-x509-ca-cert
+     csh 	application/x-csh
+     css 	text/css
+     dcr 	application/x-director
+     der 	application/x-x509-ca-cert
+     dir 	application/x-director
+     dll 	application/x-msdownload
+     dms 	application/octet-stream
+     doc 	application/msword
+     dot 	application/msword
+     dvi 	application/x-dvi
+     dxr 	application/x-director
+     eps 	application/postscript
+     etx 	text/x-setext
+     evy 	application/envoy
+     exe 	application/octet-stream
+     fif 	application/fractals
+     flr 	x-world/x-vrml
+     gif 	image/gif
+     gtar 	application/x-gtar
+     gz 	application/x-gzip
+     h 	text/plain
+     hdf 	application/x-hdf
+     hlp 	application/winhlp
+     hqx 	application/mac-binhex40
+     hta 	application/hta
+     htc 	text/x-component
+     htm 	text/html
+     html 	text/html
+     htt 	text/webviewhtml
+     ico 	image/x-icon
+     ief 	image/ief
+     iii 	application/x-iphone
+     ins 	application/x-internet-signup
+     isp 	application/x-internet-signup
+     jfif 	image/pipeg
+     jpe 	image/jpeg
+     jpeg 	image/jpeg
+     jpg 	image/jpeg
+     js 	application/x-javascript
+     latex 	application/x-latex
+     lha 	application/octet-stream
+     lsf 	video/x-la-asf
+     lsx 	video/x-la-asf
+     lzh 	application/octet-stream
+     m13 	application/x-msmediaview
+     m14 	application/x-msmediaview
+     m3u 	audio/x-mpegurl
+     man 	application/x-troff-man
+     mdb 	application/x-msaccess
+     me 	application/x-troff-me
+     mht 	message/rfc822
+     mhtml 	message/rfc822
+     mid 	audio/mid
+     mny 	application/x-msmoney
+     mov 	video/quicktime
+     movie 	video/x-sgi-movie
+     mp2 	video/mpeg
+     mp3 	audio/mpeg
+     mpa 	video/mpeg
+     mpe 	video/mpeg
+     mpeg 	video/mpeg
+     mpg 	video/mpeg
+     mpp 	application/vnd.ms-project
+     mpv2 	video/mpeg
+     ms 	application/x-troff-ms
+     mvb 	application/x-msmediaview
+     nws 	message/rfc822
+     oda 	application/oda
+     p10 	application/pkcs10
+     p12 	application/x-pkcs12
+     p7b 	application/x-pkcs7-certificates
+     p7c 	application/x-pkcs7-mime
+     p7m 	application/x-pkcs7-mime
+     p7r 	application/x-pkcs7-certreqresp
+     p7s 	application/x-pkcs7-signature
+     pbm 	image/x-portable-bitmap
+     pdf 	application/pdf
+     pfx 	application/x-pkcs12
+     pgm 	image/x-portable-graymap
+     pko 	application/ynd.ms-pkipko
+     pma 	application/x-perfmon
+     pmc 	application/x-perfmon
+     pml 	application/x-perfmon
+     pmr 	application/x-perfmon
+     pmw 	application/x-perfmon
+     pnm 	image/x-portable-anymap
+     pot, 	application/vnd.ms-powerpoint
+     ppm 	image/x-portable-pixmap
+     pps 	application/vnd.ms-powerpoint
+     ppt 	application/vnd.ms-powerpoint
+     prf 	application/pics-rules
+     ps 	application/postscript
+     pub 	application/x-mspublisher
+     qt 	video/quicktime
+     ra 	audio/x-pn-realaudio
+     ram 	audio/x-pn-realaudio
+     ras 	image/x-cmu-raster
+     rgb 	image/x-rgb
+     rmi 	audio/mid http://www.dreamdu.com
+     roff 	application/x-troff
+     rtf 	application/rtf
+     rtx 	text/richtext
+     scd 	application/x-msschedule
+     sct 	text/scriptlet
+     setpay 	application/set-payment-initiation
+     setreg 	application/set-registration-initiation
+     sh 	application/x-sh
+     shar 	application/x-shar
+     sit 	application/x-stuffit
+     snd 	audio/basic
+     spc 	application/x-pkcs7-certificates
+     spl 	application/futuresplash
+     src 	application/x-wais-source
+     sst 	application/vnd.ms-pkicertstore
+     stl 	application/vnd.ms-pkistl
+     stm 	text/html
+     svg 	image/svg+xml
+     sv4cpio 	application/x-sv4cpio
+     sv4crc 	application/x-sv4crc
+     swf 	application/x-shockwave-flash
+     t 	application/x-troff
+     tar 	application/x-tar
+     tcl 	application/x-tcl
+     tex 	application/x-tex
+     texi 	application/x-texinfo
+     texinfo 	application/x-texinfo
+     tgz 	application/x-compressed
+     tif 	image/tiff
+     tiff 	image/tiff
+     tr 	application/x-troff
+     trm 	application/x-msterminal
+     tsv 	text/tab-separated-values
+     txt 	text/plain
+     uls 	text/iuls
+     ustar 	application/x-ustar
+     vcf 	text/x-vcard
+     vrml 	x-world/x-vrml
+     wav 	audio/x-wav
+     wcm 	application/vnd.ms-works
+     wdb 	application/vnd.ms-works
+     wks 	application/vnd.ms-works
+     wmf 	application/x-msmetafile
+     wps 	application/vnd.ms-works
+     wri 	application/x-mswrite
+     wrl 	x-world/x-vrml
+     wrz 	x-world/x-vrml
+     xaf 	x-world/x-vrml
+     xbm 	image/x-xbitmap
+     xla 	application/vnd.ms-excel
+     xlc 	application/vnd.ms-excel
+     xlm 	application/vnd.ms-excel
+     xls 	application/vnd.ms-excel
+     xlt 	application/vnd.ms-excel
+     xlw 	application/vnd.ms-excel
+     xof 	x-world/x-vrml
+     xpm 	image/x-xpixmap
+     xwd 	image/x-xwindowdump
+     z 	application/x-compress
+     zip 	application/zip
+     */
+</script>
+</body>
+</html>
+<!--kugouend-->
